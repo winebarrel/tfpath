@@ -1,0 +1,38 @@
+version: "2"
+linters:
+  enable:
+    - asasalint
+    - durationcheck
+    - errorlint
+    - fatcontext
+    - makezero
+    - modernize
+    - nilerr
+    - nilnesserr
+    - perfsprint
+    - reassign
+    - testifylint
+    - unconvert
+    - usestdlibvars
+    - wastedassign
+  settings:
+    perfsprint:
+      # Only error-format is on: fmt.Errorf with a constant message becomes
+      # errors.New.
+      integer-format: false
+      string-format: false
+      bool-format: false
+      hex-format: false
+      concat-loop: false
+  exclusions:
+    rules:
+      - linters:
+          - errcheck
+        path: _test\.go
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofumpt
+    - goimports
