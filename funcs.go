@@ -6,12 +6,14 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2/ext/tryfunc"
 	"github.com/zclconf/go-cty/cty"
+	"github.com/zclconf/go-cty/cty/convert"
 	"github.com/zclconf/go-cty/cty/function"
 	"github.com/zclconf/go-cty/cty/function/stdlib"
 )
@@ -35,7 +37,7 @@ func functions(rootDir string) map[string]function.Function {
 		"ceil":            stdlib.CeilFunc,
 		"chomp":           stdlib.ChompFunc,
 		"chunklist":       stdlib.ChunklistFunc,
-		"coalesce":        stdlib.CoalesceFunc,
+		"coalesce":        coalesceFunc,
 		"coalescelist":    stdlib.CoalesceListFunc,
 		"compact":         stdlib.CompactFunc,
 		"concat":          stdlib.ConcatFunc,
@@ -56,7 +58,7 @@ func functions(rootDir string) map[string]function.Function {
 		"jsondecode":      stdlib.JSONDecodeFunc,
 		"jsonencode":      stdlib.JSONEncodeFunc,
 		"keys":            stdlib.KeysFunc,
-		"length":          stdlib.LengthFunc,
+		"length":          lengthFunc,
 		"log":             stdlib.LogFunc,
 		"lookup":          stdlib.LookupFunc,
 		"lower":           stdlib.LowerFunc,
@@ -165,5 +167,84 @@ var replaceFunc = function.New(&function.Spec{
 			return stdlib.RegexReplace(args[0], cty.StringVal(substr[1:len(substr)-1]), args[2])
 		}
 		return stdlib.Replace(args[0], args[1], args[2])
+	},
+})
+
+// coalesceFunc is Terraform's coalesce: unlike stdlib.CoalesceFunc, it
+// also skips empty strings.
+var coalesceFunc = function.New(&function.Spec{
+	VarParam: &function.Parameter{
+		Name:             "vals",
+		Type:             cty.DynamicPseudoType,
+		AllowUnknown:     true,
+		AllowDynamicType: true,
+		AllowNull:        true,
+	},
+	Type: func(args []cty.Value) (cty.Type, error) {
+		types := make([]cty.Type, len(args))
+		for i, v := range args {
+			types[i] = v.Type()
+		}
+
+		ty, _ := convert.UnifyUnsafe(types)
+		if ty == cty.NilType {
+			return cty.NilType, errors.New("all arguments must have the same type")
+		}
+
+		return ty, nil
+	},
+	Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+		for _, v := range args {
+			v, err := convert.Convert(v, retType)
+			if err != nil {
+				return cty.UnknownVal(retType), err
+			}
+
+			if !v.IsKnown() {
+				return cty.UnknownVal(retType), nil
+			}
+
+			if v.IsNull() || (retType == cty.String && v.RawEquals(cty.StringVal(""))) {
+				continue
+			}
+
+			return v, nil
+		}
+
+		return cty.NilVal, errors.New("no non-null, non-empty-string arguments")
+	},
+})
+
+// lengthFunc is Terraform's length: unlike stdlib.LengthFunc, it also
+// accepts strings and counts their characters.
+var lengthFunc = function.New(&function.Spec{
+	Params: []function.Parameter{{
+		Name:             "value",
+		Type:             cty.DynamicPseudoType,
+		AllowUnknown:     true,
+		AllowDynamicType: true,
+	}},
+	Type: function.StaticReturnType(cty.Number),
+	Impl: func(args []cty.Value, _ cty.Type) (cty.Value, error) {
+		v := args[0]
+		ty := v.Type()
+
+		switch {
+		case ty == cty.DynamicPseudoType:
+			return cty.UnknownVal(cty.Number), nil
+		case ty.IsTupleType():
+			return cty.NumberIntVal(int64(ty.Length())), nil
+		case ty.IsObjectType():
+			return cty.NumberIntVal(int64(len(ty.AttributeTypes()))), nil
+		case ty == cty.String:
+			if !v.IsKnown() {
+				return cty.UnknownVal(cty.Number), nil
+			}
+			return stdlib.Strlen(v)
+		case ty.IsListType() || ty.IsSetType() || ty.IsMapType():
+			return v.Length(), nil
+		}
+
+		return cty.UnknownVal(cty.Number), errors.New("argument must be a string, a collection type, or a structural type")
 	},
 })

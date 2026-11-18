@@ -148,9 +148,18 @@ func (c *Config) loadModule(dir, key string, depth int) (*module, error) {
 		return nil, fmt.Errorf("module nesting too deep at %s", dir)
 	}
 
-	files, err := filepath.Glob(filepath.Join(dir, "*.tf"))
+	matches, err := filepath.Glob(filepath.Join(dir, "*.tf"))
 	if err != nil {
 		return nil, err
+	}
+
+	// Like Terraform, skip directories whose names end with .tf.
+	var files []string
+	for _, path := range matches {
+		if fi, err := os.Stat(path); err == nil && fi.IsDir() {
+			continue
+		}
+		files = append(files, path)
 	}
 
 	if len(files) == 0 {
@@ -329,14 +338,18 @@ func autoVarFiles(rootDir string) ([]string, error) {
 		}
 	}
 
+	// Like Terraform, *.auto.tfvars and *.auto.tfvars.json are loaded
+	// together in lexical order of their file names.
+	var autoFiles []string
 	for _, pat := range []string{"*.auto.tfvars", "*.auto.tfvars.json"} {
 		matches, err := filepath.Glob(filepath.Join(rootDir, pat))
 		if err != nil {
 			return nil, err
 		}
-		sort.Strings(matches)
-		files = append(files, matches...)
+		autoFiles = append(autoFiles, matches...)
 	}
+	sort.Strings(autoFiles)
+	files = append(files, autoFiles...)
 
 	return files, nil
 }
