@@ -10,16 +10,3 @@ builds:
       - CGO_ENABLED=0
 checksum:
   name_template: "checksums.txt"
-homebrew_casks:
-  - repository:
-      owner: winebarrel
-      name: homebrew-tfpath
-    homepage: https://github.com/winebarrel/tfpath
-    description: Query values from Terraform configurations (including modules) as JSON.
-    license: MIT
-    hooks:
-      post:
-        install: |
-          if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/tfpath"]
-          end

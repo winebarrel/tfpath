@@ -11,8 +11,10 @@ It does not need providers, credentials or state.
 
 ## Installation
 
+Download a binary from the [releases page](https://github.com/winebarrel/tfpath/releases/latest), or:
+
 ```
-brew install winebarrel/tfpath/tfpath
+go install github.com/winebarrel/tfpath/cmd/tfpath@latest
 ```
 
 ## Usage
