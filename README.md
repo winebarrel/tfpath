@@ -3,7 +3,7 @@
 [![CI](https://github.com/winebarrel/tfpath/actions/workflows/ci.yml/badge.svg)](https://github.com/winebarrel/tfpath/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/winebarrel/tfpath.svg)](https://pkg.go.dev/github.com/winebarrel/tfpath)
 [![codecov](https://codecov.io/gh/winebarrel/tfpath/branch/main/graph/badge.svg)](https://codecov.io/gh/winebarrel/tfpath)
-[![AI Generated](https://img.shields.io/badge/AI%20Generated-Claude-orange?logo=anthropic)](https://claude.ai/claude-code)
+[![AI Generated](https://img.shields.io/badge/AI%20Generated-Claude-orange?logo=anthropic)](https://claude.com/product/claude-code)
 
 `tfpath` reads Terraform `.tf` files, including every module they call, and prints the values matching a query as JSON. Variables, locals, `count` / `for_each` and built-in functions are evaluated as far as the configuration alone allows; values only known after apply (resource attributes, data sources, ...) are kept as their source expression.
 
