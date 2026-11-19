@@ -196,6 +196,57 @@ func TestFunctions(t *testing.T) {
 		{`provider::terraform::encode_tfvars({ a = "b", n = 1 })`, `"a = \"b\"\nn = 1\n"`},
 		{`provider::terraform::decode_tfvars("a = \"b\"\nn = [1]\n")`, `{"a": "b", "n": [1]}`},
 		{`provider::terraform::encode_expr(["a", 1])`, `"[\"a\", 1]"`},
+		// unknown arguments and invalid inputs are kept as source text
+		{`alltrue([true, aws_x.y.enabled])`, `"${alltrue([true, aws_x.y.enabled])}"`},
+		{`anytrue([aws_x.y.enabled, true])`, `true`},
+		{`anytrue([aws_x.y.enabled, false])`, `"${anytrue([aws_x.y.enabled, false])}"`},
+		{`index("abc", "a")`, `"${index(\"abc\", \"a\")}"`},
+		{`index([], "a")`, `"${index([], \"a\")}"`},
+		{`index([aws_x.y.id], "a")`, `"${index([aws_x.y.id], \"a\")}"`},
+		{`matchkeys(["a"], ["x", "y"], ["x"])`, `"${matchkeys([\"a\"], [\"x\", \"y\"], [\"x\"])}"`},
+		{`matchkeys(["a"], ["x"], [])`, `[]`},
+		{`matchkeys([aws_x.y.id], ["x"], ["x"])`, `"${matchkeys([aws_x.y.id], [\"x\"], [\"x\"])}"`},
+		{`matchkeys(["a"], ["x"], [aws_x.y.id])`, `"${matchkeys([\"a\"], [\"x\"], [aws_x.y.id])}"`},
+		{`one("a")`, `"${one(\"a\")}"`},
+		{`sum("1")`, `"${sum(\"1\")}"`},
+		{`sum([1, null])`, `"${sum([1, null])}"`},
+		{`sum(["a"])`, `"${sum([\"a\"])}"`},
+		{`sum([1, aws_x.y.count])`, `"${sum([1, aws_x.y.count])}"`},
+		{`transpose({})`, `{}`},
+		{`transpose({ a = [aws_x.y.id] })`, `"${transpose({ a = [aws_x.y.id] })}"`},
+		{`uuidv5("oid", "1.3.6.1")`, `"1447fa61-5277-5fef-a9b3-fbc6e44f4af3"`},
+		{`uuidv5("x500", "cn=x")`, `"a951fb6d-5aab-5a72-8e2e-9aa8df8d1f8f"`},
+		{`uuidv5("nope", "x")`, `"${uuidv5(\"nope\", \"x\")}"`},
+		{`textencodebase64("こんにちは", "ISO-8859-1")`, `"${textencodebase64(\"こんにちは\", \"ISO-8859-1\")}"`},
+		{`textdecodebase64("!!", "UTF-16LE")`, `"${textdecodebase64(\"!!\", \"UTF-16LE\")}"`},
+		{`textdecodebase64("YQ==", "nope")`, `"${textdecodebase64(\"YQ==\", \"nope\")}"`},
+		{`timecmp("2017-11-22", "2017-11-22T00:00:00Z")`, `"${timecmp(\"2017-11-22\", \"2017-11-22T00:00:00Z\")}"`},
+		{`templatestring("$${tonumber(x)}", { x = "a" })`, `"${templatestring(\"$${tonumber(x)}\", { x = \"a\" })}"`},
+		{`templatestring("$${x}", "x")`, `"${templatestring(\"$${x}\", \"x\")}"`},
+		{`templatestring("$${", {})`, `"${templatestring(\"$${\", {})}"`},
+		{`cidrhost("10.0.0.0", 1)`, `"${cidrhost(\"10.0.0.0\", 1)}"`},
+		{`cidrhost("10.0.0.0/30", 8)`, `"${cidrhost(\"10.0.0.0/30\", 8)}"`},
+		{`cidrhost("10.0.0.0/24", 1.5)`, `"${cidrhost(\"10.0.0.0/24\", 1.5)}"`},
+		{`cidrnetmask("10.0.0.0")`, `"${cidrnetmask(\"10.0.0.0\")}"`},
+		{`cidrsubnet("10.0.0.0", 8, 1)`, `"${cidrsubnet(\"10.0.0.0\", 8, 1)}"`},
+		{`cidrsubnet("10.0.0.0/24", 4, 16)`, `"${cidrsubnet(\"10.0.0.0/24\", 4, 16)}"`},
+		{`cidrsubnet("10.0.0.0/8", 1.5, 0)`, `"${cidrsubnet(\"10.0.0.0/8\", 1.5, 0)}"`},
+		{`cidrsubnet("10.0.0.0/8", 8, 1.5)`, `"${cidrsubnet(\"10.0.0.0/8\", 8, 1.5)}"`},
+		{`cidrsubnets("10.0.0.0/16")`, `[]`},
+		{`cidrsubnets("10.0.0.0", 8)`, `"${cidrsubnets(\"10.0.0.0\", 8)}"`},
+		{`cidrsubnets("10.0.0.0/16", 0)`, `"${cidrsubnets(\"10.0.0.0/16\", 0)}"`},
+		{`cidrsubnets("10.0.0.0/16", 1.5)`, `"${cidrsubnets(\"10.0.0.0/16\", 1.5)}"`},
+		{`cidrsubnets("fd00::/48", 33)`, `"${cidrsubnets(\"fd00::/48\", 33)}"`},
+		{`cidrsubnets("10.0.0.0/24", 9)`, `"${cidrsubnets(\"10.0.0.0/24\", 9)}"`},
+		{`issensitive(aws_x.y.id)`, `"${issensitive(aws_x.y.id)}"`},
+		{`provider::terraform::encode_tfvars(null)`, `"${provider::terraform::encode_tfvars(null)}"`},
+		{`provider::terraform::encode_tfvars("a")`, `"${provider::terraform::encode_tfvars(\"a\")}"`},
+		{`provider::terraform::encode_tfvars({ "1a" = 1 })`, `"${provider::terraform::encode_tfvars({ \"1a\" = 1 })}"`},
+		{`provider::terraform::encode_tfvars({ a = aws_x.y.id })`, `"${provider::terraform::encode_tfvars({ a = aws_x.y.id })}"`},
+		{`provider::terraform::decode_tfvars("a =")`, `"${provider::terraform::decode_tfvars(\"a =\")}"`},
+		{`provider::terraform::decode_tfvars("a {}")`, `"${provider::terraform::decode_tfvars(\"a {}\")}"`},
+		{`provider::terraform::decode_tfvars("a = var.x")`, `"${provider::terraform::decode_tfvars(\"a = var.x\")}"`},
+		{`provider::terraform::encode_expr(aws_x.y.id)`, `"${provider::terraform::encode_expr(aws_x.y.id)}"`},
 		// errors and unsupported functions are kept as source text
 		{`base64decode("!!")`, `"${base64decode(\"!!\")}"`},
 		{`templatefile("x.tpl", {})`, `"${templatefile(\"x.tpl\", {})}"`},
@@ -273,6 +324,10 @@ func TestFileFunctionsExtra(t *testing.T) {
 		{`templatefile("greet.tpl", { name = "Jane", items = ["a", "b"] })`, "Hello, Jane! [A][B]"},
 		{`templatefile("greet.tpl", { name = "Jane" })`, `${templatefile("greet.tpl", { name = "Jane" })}`},
 		{`templatefile("loop.tpl", {})`, `${templatefile("loop.tpl", {})}`},
+		{`templatefile("nope.tpl", {})`, `${templatefile("nope.tpl", {})}`},
+		{`templatefile("greet.tpl", { "1name" = "Jane", items = [] })`, `${templatefile("greet.tpl", { "1name" = "Jane", items = [] })}`},
+		{`filemd5("nope.txt")`, `${filemd5("nope.txt")}`},
+		{`fileset("files", "[")`, `${fileset("files", "[")}`},
 		{`abspath("files/../hello.txt")`, filepath.ToSlash(filepath.Join(dir, "hello.txt"))},
 		{`basename("foo/bar/baz.txt")`, "baz.txt"},
 		{`dirname("foo/bar/baz.txt")`, filepath.FromSlash("foo/bar")},
@@ -302,6 +357,16 @@ func TestRSADecrypt(t *testing.T) {
 `+string(keyPEM)+`EOT
 )`))
 	assert.Equal(t, `${rsadecrypt("!!", "x")}`, evalLocal(t, dir, `rsadecrypt("!!", "x")`))
+	assert.Equal(t, `${rsadecrypt("`+b64+`", "not a key")}`, evalLocal(t, dir, `rsadecrypt("`+b64+`", "not a key")`))
+
+	// Decrypting with a different key fails.
+	other, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	otherPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(other)})
+	expr := `rsadecrypt("` + b64 + `", <<EOT
+` + string(otherPEM) + `EOT
+)`
+	assert.Equal(t, "${"+expr+"}", evalLocal(t, dir, expr))
 }
 
 func TestSensitiveAndEphemeralVariables(t *testing.T) {
