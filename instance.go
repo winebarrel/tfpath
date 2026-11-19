@@ -83,30 +83,34 @@ func (i *instance) variable(name string) cty.Value {
 	}
 
 	return i.memo("var."+name, func() cty.Value {
-		val, ok := i.rawVariable(v)
-
-		if !ok {
-			if v.def == nil {
-				return cty.DynamicVal
-			}
-
-			d, diags := v.def.Value(nil)
-			if diags.HasErrors() {
-				return cty.DynamicVal
-			}
-			val = d
-		}
-
-		if v.defaults != nil {
-			val = v.defaults.Apply(val)
-		}
-
-		if conv, err := convert.Convert(val, v.typ); err == nil {
-			val = conv
-		}
-
-		return val
+		return i.evalVariable(v).WithMarks(v.marks)
 	})
+}
+
+func (i *instance) evalVariable(v *variable) cty.Value {
+	val, ok := i.rawVariable(v)
+
+	if !ok {
+		if v.def == nil {
+			return cty.DynamicVal
+		}
+
+		d, diags := v.def.Value(nil)
+		if diags.HasErrors() {
+			return cty.DynamicVal
+		}
+		val = d
+	}
+
+	if v.defaults != nil {
+		val = v.defaults.Apply(val)
+	}
+
+	if conv, err := convert.Convert(val, v.typ); err == nil {
+		val = conv
+	}
+
+	return val
 }
 
 func (i *instance) rawVariable(v *variable) (cty.Value, bool) {

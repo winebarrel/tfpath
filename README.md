@@ -113,7 +113,8 @@ Wildcards:
 
 - Root variables come from, in increasing precedence: `default`, `terraform.tfvars(.json)`, `*.auto.tfvars(.json)`, `--var-file`, `--var`. Module variables come from the arguments of the module call. Type constraints, including `optional()` defaults, are applied.
 - `local`, `path.*`, `terraform.workspace` (always `default` on the CLI), `count.index`, `each.*`, dynamic block iterators and module outputs are evaluated.
-- Most string, collection, encoding, hash and type conversion functions are supported, as are `file` and `fileexists`. Calls to other functions are kept as source text.
+- Terraform's built-in functions are supported, including `templatefile`, the filesystem functions (relative paths are resolved against the root module directory) and `provider::terraform::*`. Functions whose result changes on every run (`timestamp`, `plantimestamp`, `uuid`, `bcrypt`) and provider-defined functions are kept as source text.
+- Variables declared with `sensitive = true` / `ephemeral = true` are seen as such by `issensitive` and `ephemeralasnull`. Values are printed in clear text.
 - Anything that depends on a resource, a data source or a variable without a value is unknown. An unknown value is printed as its source text, e.g. `"${aws_iam_role.web.name}"`. Object and tuple literals are evaluated element by element, so only the unknown parts are replaced.
 - When `count` / `for_each` is unknown, the resource or module is printed once without a key.
 
