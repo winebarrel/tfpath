@@ -33,6 +33,7 @@ type Config struct {
 	inputs      map[string]cty.Value
 	cliVars     map[string]string
 	funcs       map[string]function.Function
+	data        []*dataEntry
 	warnings    []string
 }
 
@@ -127,6 +128,21 @@ func Load(opts *Options) (*Config, error) {
 		if err := c.loadVarFile(f); err != nil {
 			return nil, err
 		}
+	}
+
+	for _, f := range opts.DataFiles {
+		if err := c.loadDataFile(f); err != nil {
+			return nil, err
+		}
+	}
+
+	data := make(map[string]cty.Value, len(opts.Data))
+	for k, v := range opts.Data {
+		data[k] = cty.StringVal(v)
+	}
+
+	if err := c.addData(data); err != nil {
+		return nil, err
 	}
 
 	c.root = newInstance(c, mod, "", cty.NilVal, nil)

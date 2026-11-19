@@ -2,6 +2,7 @@ package tfpath
 
 import (
 	"path/filepath"
+	"slices"
 	"sort"
 
 	"github.com/hashicorp/hcl/v2"
@@ -24,6 +25,7 @@ type instance struct {
 	cache     map[string]cty.Value
 	busy      map[string]bool
 	children  map[string]*expansion
+	segments  []moduleSegment
 }
 
 func newInstance(cfg *Config, mod *module, path string, key cty.Value, callScope *scope) *instance {
@@ -210,6 +212,7 @@ func (i *instance) childInstances(name string) *expansion {
 		path := joinPath(i.path, "module."+name) + formatKey(item.key)
 		child := newInstance(i.cfg, call.mod, path, item.key, item.scope)
 		child.call = call
+		child.segments = append(slices.Clone(i.segments), moduleSegment{name: name, key: item.key})
 		item.inst = child
 	}
 

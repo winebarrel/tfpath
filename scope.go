@@ -42,6 +42,8 @@ func (s *scope) evalContext(expr hcl.Expression) *hcl.EvalContext {
 	allLocals := false
 	outputs := map[string]map[string]bool{}
 	allOutputs := map[string]bool{}
+	data := map[string]map[string]cty.Value{}
+	allData := false
 
 	for _, t := range expr.Variables() {
 		root := t.RootName()
@@ -90,6 +92,23 @@ func (s *scope) evalContext(expr hcl.Expression) *hcl.EvalContext {
 			} else {
 				allOutputs[name] = true
 			}
+		case "data":
+			typ, ok1 := attrAt(t, 1)
+			name, ok2 := attrAt(t, 2)
+			if !ok1 || !ok2 {
+				allData = true
+				continue
+			}
+
+			if data[typ] == nil {
+				data[typ] = map[string]cty.Value{}
+			}
+
+			v, ok := data[typ][name]
+			if !ok {
+				v = i.dataValue(typ, name)
+			}
+			data[typ][name] = fillTraversal(v, t[3:])
 		case "path":
 			vars["path"] = i.pathObject()
 		case "terraform":
@@ -132,6 +151,16 @@ func (s *scope) evalContext(expr hcl.Expression) *hcl.EvalContext {
 			vals[name] = i.moduleValue(name, outs)
 		}
 		vars["module"] = cty.ObjectVal(vals)
+	}
+
+	if allData {
+		vars["data"] = cty.DynamicVal
+	} else if len(data) > 0 {
+		types := map[string]cty.Value{}
+		for typ, names := range data {
+			types[typ] = cty.ObjectVal(names)
+		}
+		vars["data"] = cty.ObjectVal(types)
 	}
 
 	return &hcl.EvalContext{Variables: vars, Functions: i.cfg.funcs}

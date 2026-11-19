@@ -31,6 +31,10 @@ Flags:
       --var-file=FILE     Load variable values from a .tfvars(.json) file
                           (repeatable).
       --var=NAME=VALUE    Set a root module variable (repeatable).
+      --data-file=FILE    Load data source values from a JSON file
+                          (repeatable).
+      --data=ADDR=VALUE   Set a data source attribute to a string, e.g.
+                          data.aws_region.current.name=us-east-1 (repeatable).
   -c, --compact           Print compact JSON.
       --version
 ```
@@ -115,8 +119,32 @@ Wildcards:
 - `local`, `path.*`, `terraform.workspace` (always `default` on the CLI), `count.index`, `each.*`, dynamic block iterators and module outputs are evaluated.
 - Terraform's built-in functions are supported, including `templatefile`, the filesystem functions (relative paths are resolved against the root module directory) and `provider::terraform::*`. Functions whose result changes on every run (`timestamp`, `plantimestamp`, `uuid`, `bcrypt`) and provider-defined functions are kept as source text.
 - Variables declared with `sensitive = true` / `ephemeral = true` are seen as such by `issensitive` and `ephemeralasnull`. Values are printed in clear text.
-- Anything that depends on a resource, a data source or a variable without a value is unknown. An unknown value is printed as its source text, e.g. `"${aws_iam_role.web.name}"`. Object and tuple literals are evaluated element by element, so only the unknown parts are replaced.
+- Anything that depends on a resource, a data source without given values (see [Data sources](#data-sources)) or a variable without a value is unknown. An unknown value is printed as its source text, e.g. `"${aws_iam_role.web.name}"`. Object and tuple literals are evaluated element by element, so only the unknown parts are replaced.
 - When `count` / `for_each` is unknown, the resource or module is printed once without a key.
+
+## Data sources
+
+Values of data sources can be given with `--data-file` and `--data`, so that expressions referring to them are evaluated.
+
+```json
+{
+  "data.aws_caller_identity.current": {
+    "account_id": "123456789012"
+  },
+  "**.data.aws_region.current.name": "ap-northeast-1",
+  "data.aws_subnet.private[0].id": "subnet-0123"
+}
+```
+
+```
+$ tfpath --data-file data.json --data 'module.web.data.aws_region.current.name=us-east-1' 'aws_s3_bucket.*'
+```
+
+- A key is a data source address, optionally followed by an attribute path. The module path can use `*` and `**` as in queries, and an address without a key applies to all instances of a module call or a data source with `count` / `for_each`.
+- `--data` values are strings. Use `--data-file` for numbers, lists and objects.
+- Attributes that are not given stay unknown. A reference to the whole data source (e.g. `jsonencode(data.x.y)`) sees only the given attributes.
+- Sources are applied in order: each `--data-file`, then `--data`, so later ones override earlier ones. Within a source, when several entries set the same attribute, the more specific address wins (fewer wildcards and keyless module calls or instances, then the longer attribute path).
+- Given values are used only in references. Querying a data source block still prints its arguments.
 
 ## Modules
 

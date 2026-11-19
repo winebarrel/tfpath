@@ -17,12 +17,14 @@ func init() {
 }
 
 type cli struct {
-	Queries []string          `arg:"" help:"Queries such as 'module.*.aws_s3_bucket.*.bucket'."`
-	Dir     string            `short:"C" default:"." help:"Root module directory."`
-	VarFile []string          `name:"var-file" sep:"none" placeholder:"FILE" help:"Load variable values from a .tfvars(.json) file (repeatable)."`
-	Var     map[string]string `name:"var" mapsep:"none" placeholder:"NAME=VALUE" help:"Set a root module variable (repeatable)."`
-	Compact bool              `short:"c" help:"Print compact JSON."`
-	Version kong.VersionFlag
+	Queries  []string          `arg:"" help:"Queries such as 'module.*.aws_s3_bucket.*.bucket'."`
+	Dir      string            `short:"C" default:"." help:"Root module directory."`
+	VarFile  []string          `name:"var-file" sep:"none" placeholder:"FILE" help:"Load variable values from a .tfvars(.json) file (repeatable)."`
+	Var      map[string]string `name:"var" mapsep:"none" placeholder:"NAME=VALUE" help:"Set a root module variable (repeatable)."`
+	DataFile []string          `name:"data-file" sep:"none" placeholder:"FILE" help:"Load data source values from a JSON file (repeatable)."`
+	Data     map[string]string `name:"data" mapsep:"none" placeholder:"ADDR=VALUE" help:"Set a data source attribute to a string, e.g. data.aws_region.current.name=us-east-1 (repeatable)."`
+	Compact  bool              `short:"c" help:"Print compact JSON."`
+	Version  kong.VersionFlag
 }
 
 func main() {
@@ -43,9 +45,11 @@ func main() {
 	}
 
 	cfg, err := tfpath.Load(&tfpath.Options{
-		Dir:      opts.Dir,
-		VarFiles: opts.VarFile,
-		Vars:     opts.Var,
+		Dir:       opts.Dir,
+		VarFiles:  opts.VarFile,
+		Vars:      opts.Var,
+		DataFiles: opts.DataFile,
+		Data:      opts.Data,
 	})
 	if err != nil {
 		log.Fatal(err)

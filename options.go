@@ -15,6 +15,17 @@ type Options struct {
 	// primitive types and parsed as an HCL expression otherwise.
 	Vars map[string]string
 
+	// DataFiles are JSON files giving values of data sources, applied in
+	// the given order. Each key is a data source address, optionally
+	// followed by an attribute path, such as "data.aws_region.current" or
+	// "module.*.data.aws_caller_identity.current.account_id". Module paths
+	// can use "*" and "**" like queries.
+	DataFiles []string
+
+	// Data sets values of data sources like DataFiles. The values are
+	// strings, and take precedence over DataFiles.
+	Data map[string]string
+
 	// Workspace is the value of terraform.workspace. Defaults to "default".
 	Workspace string
 }
