@@ -1,12 +1,15 @@
 package tfpath_test
 
 import (
+	"bytes"
+	"compress/gzip"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -147,7 +150,6 @@ func TestFunctions(t *testing.T) {
 		{`sha512("hello world")`, `"309ecc489c12d6eb4cc40f50c902f2b4d0ed77ee511a7c7a9bcd3ca86d4cd86f989dd35bc5ff499670da34255b45b0cfd830e81f605dcf7dc5542e93ae9cd76f"`},
 		{`base64sha256("hello world")`, `"uU0nuZNNPgilLlLX2n2r+sSE7+N6U4DukIj3rOLvzek="`},
 		{`base64sha512("hello world")`, `"MJ7MSJwS1utMxA9QyQLytNDtd+5RGnx6m808qG1M2G+YndNbxf9JlnDaNCVbRbDP2DDoH2Bdz33FVC6TrpzXbw=="`},
-		{`base64gzip("test")`, `"H4sIAAAAAAAA/wAEAPv/dGVzdAMADH5/2AQAAAA="`},
 		{`base64decode("/w==")`, `"${base64decode(\"/w==\")}"`},
 		{`textencodebase64("Hello World", "UTF-16LE")`, `"SABlAGwAbABvACAAVwBvAHIAbABkAA=="`},
 		{`textdecodebase64("SABlAGwAbABvACAAVwBvAHIAbABkAA==", "UTF-16LE")`, `"Hello World"`},
@@ -345,4 +347,21 @@ locals {
 		require.Len(t, matches, 1, query)
 		assert.Equal(t, expected, matches[0].Value, query)
 	}
+}
+
+// The gzip bytes depend on the Go version, so check a round trip.
+func TestBase64Gzip(t *testing.T) {
+	v := evalLocal(t, t.TempDir(), `base64gzip("test")`)
+	s, ok := v.(string)
+	require.True(t, ok, v)
+
+	b, err := base64.StdEncoding.DecodeString(s)
+	require.NoError(t, err)
+
+	r, err := gzip.NewReader(bytes.NewReader(b))
+	require.NoError(t, err)
+
+	out, err := io.ReadAll(r)
+	require.NoError(t, err)
+	assert.Equal(t, "test", string(out))
 }
