@@ -51,6 +51,7 @@ type variable struct {
 	def      hcl.Expression
 	typ      cty.Type
 	defaults *typeexpr.Defaults
+	marks    cty.ValueMarks
 }
 
 type resource struct {
@@ -262,6 +263,15 @@ func parseVariable(b *hclsyntax.Block) (*variable, error) {
 
 	if a, ok := b.Body.Attributes["default"]; ok {
 		v.def = a.Expr
+	}
+
+	v.marks = cty.ValueMarks{}
+	for _, mark := range []string{markSensitive, markEphemeral} {
+		if a, ok := b.Body.Attributes[mark]; ok {
+			if val, diags := a.Expr.Value(nil); !diags.HasErrors() && val.Type() == cty.Bool && val.IsKnown() && !val.IsNull() && val.True() {
+				v.marks[mark] = struct{}{}
+			}
+		}
 	}
 
 	return v, nil
