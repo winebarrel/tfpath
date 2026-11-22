@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/alecthomas/kong v1.17.0
 	github.com/apparentlymart/go-cidr v1.1.1
-	github.com/bmatcuk/doublestar/v4 v4.10.5
+	github.com/bmatcuk/doublestar/v4 v4.10.7
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/hcl/v2 v2.25.0
 	github.com/stretchr/testify v1.12.1
